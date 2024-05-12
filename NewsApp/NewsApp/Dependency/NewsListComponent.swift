@@ -10,7 +10,7 @@ import NeedleFoundation
 
 protocol NewsListDependency: Dependency {
     var network: NetworkServiceType { get }
-    var imageLoader: ImageLoadType { get }
+    var coreDataManager: CoreDataManager { get }
 }
 
 protocol NewsListBuilder {
@@ -19,7 +19,7 @@ protocol NewsListBuilder {
 
 class NewsListComponent: Component<NewsListDependency>, NewsListBuilder {
     var newsListView: UIViewController {
-        let vc = NewsListViewController(viewModel: viewModel, imageLoader: dependency.imageLoader)
+        let vc = NewsListViewController(viewModel: viewModel, imageLoader: imageLoader)
         
         return UINavigationController(rootViewController: vc)
     }
@@ -34,5 +34,17 @@ class NewsListComponent: Component<NewsListDependency>, NewsListBuilder {
     
     var repository: NewsListRepository {
         DefaultNewsListRepository(network: dependency.network)
+    }
+    
+    var imageLoader: ImageLoadType {
+        shared {
+            ImageLoader(networkService: dependency.network, storage: newsThumbnailStorage)
+        }
+    }
+    
+    var newsThumbnailStorage: NewsThumbnailStorage {
+        shared {
+            CoreDataNewsListStorage(coreDataManager: dependency.coreDataManager)
+        }
     }
 }

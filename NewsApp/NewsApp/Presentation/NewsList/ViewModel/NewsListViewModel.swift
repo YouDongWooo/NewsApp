@@ -49,9 +49,8 @@ class NewsListViewModel: ViewModelType {
                     case .padding: return nil
                     }
                 }
-                let allList = originList + model.articles
                 
-                sectionPublisher.send([makeSection(originItems, model.articles)])
+                sectionPublisher.send([self.makeSection(originItems, model.articles)])
             }
             .store(in: &cancellable)
         

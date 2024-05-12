@@ -19,9 +19,7 @@ class RootComponent: BootstrapComponent {
         }
     }
     
-    var imageLoader: ImageLoadType {
-        shared {
-            ImageLoader(networkService: network)
-        }
+    var coreDataManager: CoreDataManager {
+        CoreDataManager.shared
     }
 }

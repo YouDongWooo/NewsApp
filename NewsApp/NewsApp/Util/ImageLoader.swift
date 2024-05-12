@@ -14,64 +14,42 @@ protocol ImageLoadType {
 }
 
 class ImageLoader: ImageLoadType {
-    private var context = CoreDataManager.shared.persistentContainer.viewContext
     private let network: NetworkServiceType
+    private let storage: NewsThumbnailStorage
     private var cancellable: [String: AnyCancellable] = [:]
     
-    init(networkService: NetworkServiceType) {
+    init(networkService: NetworkServiceType, storage: NewsThumbnailStorage) {
         self.network = networkService
+        self.storage = storage
     }
     
     func loadImage(urlString: String, _ closure: @escaping (UIImage?) -> Void ) {
-        let cancellable = Deferred {
-            return Future<UIImage?, Error> { promise in
-                let request: NSFetchRequest<CachedImage> = NSFetchRequest(entityName: "CachedImage")
+        let cancellable = storage.fetch(id: urlString)
+            .flatMap { [weak self] image -> AnyPublisher<UIImage, Error> in
+                guard let self = self else { return Empty().eraseToAnyPublisher() }
                 
-                request.predicate = NSPredicate(format: "id LIKE %@", urlString)
+                if let image = image {
+                    return Future<UIImage, Error> { promise in
+                        promise(.success(image))
+                    }
+                    .eraseToAnyPublisher()
+                }
                 
-                do {
-                    let photos: [CachedImage] = try self.context.fetch(request)
-                    if let photo = photos.first {
-                        promise(.success(photo.image))
-                    }
-                    else {
-                        promise(.success(nil))
-                    }
-                }
-                catch {
-                    return
-                }
+                return self.network.request(url: urlString)
+                    .compactMap { UIImage(data: $0) }
+                    .handleEvents(receiveOutput: { image in
+                        self.storage.save(id: urlString, image: image)
+                    })
+                    .eraseToAnyPublisher()
             }
-        }
-        .flatMap { [weak self] image -> AnyPublisher<UIImage, Error> in
-            guard let self = self else { return Empty().eraseToAnyPublisher() }
-            
-            if let image = image {
-                return Future<UIImage, Error> { promise in
-                    promise(.success(image))
-                }
-                .eraseToAnyPublisher()
+            .subscribe(on: DispatchQueue.global())
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.cancellable[urlString] = nil
+                
+            } receiveValue: { str in
+                closure(str)
             }
-            
-            return self.network.request(url: urlString)
-                .compactMap { UIImage(data: $0) }
-                .handleEvents(receiveOutput: { image in
-                    let photo = CachedImage(context: self.context)
-                    photo.id = urlString
-                    photo.image = image
-                    
-                    try? self.context.save()
-                })
-                .eraseToAnyPublisher()
-        }
-        .subscribe(on: DispatchQueue.global())
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            self?.cancellable[urlString] = nil
-            
-        } receiveValue: { str in
-            closure(str)
-        }
         
         self.cancellable[urlString] = cancellable
     }

@@ -21,8 +21,8 @@ private class NewsListDependency7e0b1a79d0afd2052126Provider: NewsListDependency
     var network: NetworkServiceType {
         return rootComponent.network
     }
-    var imageLoader: ImageLoadType {
-        return rootComponent.imageLoader
+    var coreDataManager: CoreDataManager {
+        return rootComponent.coreDataManager
     }
     private let rootComponent: RootComponent
     init(rootComponent: RootComponent) {
@@ -44,7 +44,7 @@ extension RootComponent: Registration {
 extension NewsListComponent: Registration {
     public func registerItems() {
         keyPathToName[\NewsListDependency.network] = "network-NetworkServiceType"
-        keyPathToName[\NewsListDependency.imageLoader] = "imageLoader-ImageLoadType"
+        keyPathToName[\NewsListDependency.coreDataManager] = "coreDataManager-CoreDataManager"
     }
 }
 
