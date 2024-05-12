@@ -19,7 +19,7 @@ class ImageLoader: ImageLoadType {
     private var cancellable: [String: AnyCancellable] = [:]
     
     init(networkService: NetworkServiceType) {
-        network = networkService
+        self.network = networkService
     }
     
     func loadImage(urlString: String, _ closure: @escaping (UIImage?) -> Void ) {
@@ -55,6 +55,13 @@ class ImageLoader: ImageLoadType {
             
             return self.network.request(url: urlString)
                 .compactMap { UIImage(data: $0) }
+                .handleEvents(receiveOutput: { image in
+                    let photo = CachedImage(context: self.context)
+                    photo.id = urlString
+                    photo.image = image
+                    
+                    try? self.context.save()
+                })
                 .eraseToAnyPublisher()
         }
         .subscribe(on: DispatchQueue.global())
