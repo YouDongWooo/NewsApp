@@ -15,8 +15,12 @@ protocol ImageLoadType {
 
 class ImageLoader: ImageLoadType {
     private var context = CoreDataManager.shared.persistentContainer.viewContext
-    
+    private let network: NetworkServiceType
     private var cancellable: [String: AnyCancellable] = [:]
+    
+    init(networkService: NetworkServiceType) {
+        network = networkService
+    }
     
     func loadImage(urlString: String, _ closure: @escaping (UIImage?) -> Void ) {
         let cancellable = Deferred {
@@ -39,7 +43,9 @@ class ImageLoader: ImageLoadType {
                 }
             }
         }
-        .flatMap { image -> AnyPublisher<UIImage, Error> in
+        .flatMap { [weak self] image -> AnyPublisher<UIImage, Error> in
+            guard let self = self else { return Empty().eraseToAnyPublisher() }
+            
             if let image = image {
                 return Future<UIImage, Error> { promise in
                     promise(.success(image))
@@ -47,20 +53,7 @@ class ImageLoader: ImageLoadType {
                 .eraseToAnyPublisher()
             }
             
-            let url = URL(string: urlString)!
-            
-            return URLSession.shared.dataTaskPublisher(for: url)
-                .tryMap { element -> Data in
-                    guard let response = element.response as? HTTPURLResponse else {
-                        throw NetworkError.unknown
-                    }
-                    
-                    guard (200...299).contains(response.statusCode) else {
-                        throw NetworkError.responseError(statusCode: response.statusCode)
-                    }
-                    
-                    return element.data
-                }
+            return self.network.request(url: urlString)
                 .compactMap { UIImage(data: $0) }
                 .eraseToAnyPublisher()
         }

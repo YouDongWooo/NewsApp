@@ -16,14 +16,14 @@ final class NewsListViewController: UIViewController {
     
     private let viewModel: NewsListViewModel
     private var dataSource: NewsListDataSource?
+    private let imageLoader: ImageLoadType
     
     private let viewDidAppearPublisher = PassthroughSubject<Void, Never>()
     private var cancellable = Set<AnyCancellable>()
     
-    let imageLoader = ImageLoader()
-    
-    init(viewModel: NewsListViewModel) {
+    init(viewModel: NewsListViewModel, imageLoader: ImageLoadType) {
         self.viewModel = viewModel
+        self.imageLoader = imageLoader
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -85,7 +85,9 @@ extension NewsListViewController {
     }
     
     private func bindTableView() {
-        let dataSource = NewsListDataSource(tableView: tableView) { tableView, indexPath, itemIdentifier -> UITableViewCell? in
+        let dataSource = NewsListDataSource(tableView: tableView) { [weak self] tableView, indexPath, itemIdentifier -> UITableViewCell? in
+            guard let self = self else { return UITableViewCell() }
+            
             switch itemIdentifier {
             case .item(let model):
                 let cell = tableView.dequeueReusableCell(withIdentifier: NewsItemCell.identifier, for: indexPath) as! NewsItemCell
