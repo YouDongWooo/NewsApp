@@ -86,9 +86,11 @@ final class NewsItemCell: UITableViewCell {
         thumbnailImageView.image = nil
     }
     
-    func config(model: NewsListModel.NewsItem) {
+    func config(model: NewsListModel.NewsItem, imageLoader: ImageLoadType) {
         if let urlStr = model.urlToImage, let url = URL(string: urlStr) {
-            
+            imageLoader.loadImage(urlString: urlStr) { image in
+                self.thumbnailImageView.image = image
+            }
         }
         
         titleLabel.text = model.title

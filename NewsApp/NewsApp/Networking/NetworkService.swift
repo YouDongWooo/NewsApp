@@ -10,6 +10,7 @@ import Combine
 
 protocol NetworkServiceType {
     func request(api: APIType) -> AnyPublisher<Data, Error>
+    func request(url: String) -> AnyPublisher<Data, Error>
 }
 
 class NetworkService: NetworkServiceType {
@@ -22,6 +23,24 @@ class NetworkService: NetworkServiceType {
         }
         
         return session.dataTaskPublisher(for: urlReq)
+            .tryMap { element -> Data in
+                guard let response = element.response as? HTTPURLResponse else {
+                    throw NetworkError.unknown
+                }
+                
+                guard (200...299).contains(response.statusCode) else {
+                    throw NetworkError.responseError(statusCode: response.statusCode)
+                }
+                
+                return element.data
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    func request(url: String) -> AnyPublisher<Data, Error> {
+        let url = URL(string: url)!
+        
+        return session.dataTaskPublisher(for: url)
             .tryMap { element -> Data in
                 guard let response = element.response as? HTTPURLResponse else {
                     throw NetworkError.unknown
